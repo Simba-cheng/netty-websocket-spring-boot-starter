@@ -58,6 +58,7 @@ public class ServerEndpointExporter extends ApplicationObjectSupport implements 
     }
 
     protected void registerEndpoints() {
+        // 返回与此对象关联的ApplicationContext。
         ApplicationContext context = getApplicationContext();
 
         scanPackage(context);
@@ -82,10 +83,16 @@ public class ServerEndpointExporter extends ApplicationObjectSupport implements 
     private void scanPackage(ApplicationContext context) {
         String[] basePackages = null;
 
+        // 从 ApplicationContext 中获取所有使用了 EnableWebSocket注解 bean的beanName。
         String[] enableWebSocketBeanNames = context.getBeanNamesForAnnotation(EnableWebSocket.class);
+
         if (enableWebSocketBeanNames.length != 0) {
             for (String enableWebSocketBeanName : enableWebSocketBeanNames) {
+
+                // 从 ApplicationContext 中获取bean对象,根据beanName
                 Object enableWebSocketBean = context.getBean(enableWebSocketBeanName);
+
+                // 获取bean中 EnableWebSocket注解的配置信息
                 EnableWebSocket enableWebSocket = AnnotationUtils.findAnnotation(enableWebSocketBean.getClass(), EnableWebSocket.class);
                 assert enableWebSocket != null;
                 if (enableWebSocket.scanBasePackages().length != 0) {
