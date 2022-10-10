@@ -157,10 +157,12 @@ public class ServerEndpointExporter extends ApplicationObjectSupport implements 
     }
 
     private void registerEndpoint(Class<?> endpointClass) {
+        // 获取类上ServerEndpoint注解的配置
         ServerEndpoint annotation = AnnotatedElementUtils.findMergedAnnotation(endpointClass, ServerEndpoint.class);
         if (annotation == null) {
             throw new IllegalStateException("missingAnnotation ServerEndpoint");
         }
+        // 根据 ServerEndpoint主街上配置的数据构建实例对象
         ServerEndpointConfig serverEndpointConfig = buildConfig(annotation);
 
         ApplicationContext context = getApplicationContext();
