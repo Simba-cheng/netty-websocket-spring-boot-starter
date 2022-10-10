@@ -58,18 +58,21 @@ public class ServerEndpointExporter extends ApplicationObjectSupport implements 
     }
 
     protected void registerEndpoints() {
-        // 返回与此对象关联的ApplicationContext。
+        // 返回与此对象关联的 ApplicationContext。
         ApplicationContext context = getApplicationContext();
 
         scanPackage(context);
 
+        // 从 ApplicationContext 中获取所有使用了 ServerEndpoint注解 的类。
         String[] endpointBeanNames = context.getBeanNamesForAnnotation(ServerEndpoint.class);
         Set<Class<?>> endpointClasses = new LinkedHashSet<>();
         for (String beanName : endpointBeanNames) {
             endpointClasses.add(context.getType(beanName));
         }
 
+        // 注册
         for (Class<?> endpointClass : endpointClasses) {
+            // 检查指定的类是否是CGLIB生成的类(当ServerEndpoint类被cglib代理时(如aop增强)，仍能正常运行).
             if (ClassUtils.isCglibProxyClass(endpointClass)) {
                 registerEndpoint(endpointClass.getSuperclass());
             } else {
@@ -83,16 +86,15 @@ public class ServerEndpointExporter extends ApplicationObjectSupport implements 
     private void scanPackage(ApplicationContext context) {
         String[] basePackages = null;
 
-        // 从 ApplicationContext 中获取所有使用了 EnableWebSocket注解 bean的beanName。
+        /*
+            EnableWebSocket注解中的scanBasePackages属性，用于指定待扫描的包路径。
+         */
         String[] enableWebSocketBeanNames = context.getBeanNamesForAnnotation(EnableWebSocket.class);
-
         if (enableWebSocketBeanNames.length != 0) {
             for (String enableWebSocketBeanName : enableWebSocketBeanNames) {
-
                 // 从 ApplicationContext 中获取bean对象,根据beanName
                 Object enableWebSocketBean = context.getBean(enableWebSocketBeanName);
-
-                // 获取bean中 EnableWebSocket注解的配置信息
+                // 获取bean中 EnableWebSocket注解上的配置
                 EnableWebSocket enableWebSocket = AnnotationUtils.findAnnotation(enableWebSocketBean.getClass(), EnableWebSocket.class);
                 assert enableWebSocket != null;
                 if (enableWebSocket.scanBasePackages().length != 0) {
@@ -102,8 +104,15 @@ public class ServerEndpointExporter extends ApplicationObjectSupport implements 
             }
         }
 
+        /*
+            如果没有配置 EnableWebSocket注解，或者 EnableWebSocket注解 上没有使用 scanBasePackages属性，
+            则读取 SpringBootApplication注解 上的 scanBasePackages属性，用作待扫描的包路径。
+
+            如果 SpringBootApplication注解 上的 scanBasePackages属性 没有使用，则将主类所在的包设为待扫描的包路径。
+         */
         // use @SpringBootApplication package
         if (basePackages == null) {
+            // springBoot主类所在包路径
             String[] springBootApplicationBeanName = context.getBeanNamesForAnnotation(SpringBootApplication.class);
             Object springBootApplicationBean = context.getBean(springBootApplicationBeanName[0]);
             SpringBootApplication springBootApplication = AnnotationUtils.findAnnotation(springBootApplicationBean.getClass(), SpringBootApplication.class);
@@ -111,12 +120,14 @@ public class ServerEndpointExporter extends ApplicationObjectSupport implements 
             if (springBootApplication.scanBasePackages().length != 0) {
                 basePackages = springBootApplication.scanBasePackages();
             } else {
+                // 获取 springBoot主类 所在的包路径
                 String packageName = ClassUtils.getPackageName(springBootApplicationBean.getClass().getName());
                 basePackages = new String[1];
                 basePackages[0] = packageName;
             }
         }
 
+        // 从指定包路径扫描 ServerEndpoint注解，具体做什么用待研究
         EndpointClassPathScanner scanHandle = new EndpointClassPathScanner((BeanDefinitionRegistry) context, false);
         if (resourceLoader != null) {
             scanHandle.setResourceLoader(resourceLoader);
